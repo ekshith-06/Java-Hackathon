@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Online Blood Donor Directory</title>
+<style>
+  :root { --red:#c62828; --red-d:#8e0000; --bg:#f6f3f2; --card:#fff; --ink:#222; --mute:#6b6b6b; --line:#e6e0de; --ok:#1b7f3b; --okbg:#e3f5e8; --noBg:#eee; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; background:var(--bg); color:var(--ink); }
+  header { background:linear-gradient(135deg,var(--red),var(--red-d)); color:#fff; padding:22px 20px 60px; }
+  .wrap { max-width:1100px; margin:0 auto; }
+  header h1 { margin:0; font-size:26px; display:flex; align-items:center; gap:10px; }
+  header p { margin:6px 0 0; opacity:.9; }
+  main { margin-top:-40px; padding:0 16px 40px; }
+  .card { background:var(--card); border-radius:14px; box-shadow:0 2px 10px rgba(0,0,0,.08); padding:16px; margin-bottom:16px; }
+  h2 { font-size:15px; margin:0 0 10px; color:var(--mute); text-transform:uppercase; letter-spacing:.05em; }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(84px,1fr)); gap:10px; }
+  .stat { border:1px solid var(--line); border-radius:12px; padding:10px; text-align:center; cursor:pointer; background:#fff; font:inherit; }
+  .stat:hover { border-color:var(--red); }
+  .stat.active { border-color:var(--red); background:#fdeceb; }
+  .stat b { display:block; font-size:22px; color:var(--red); }
+  .stat span { font-size:13px; font-weight:600; }
+  .summary { color:var(--mute); font-size:14px; margin-top:10px; }
+  .toolbar { display:grid; grid-template-columns:2fr 1fr 1fr auto auto; gap:10px; align-items:center; }
+  input, select { font:inherit; padding:10px 12px; border:1px solid var(--line); border-radius:10px; width:100%; background:#fff; }
+  input:focus, select:focus { outline:2px solid #f3b5b2; border-color:var(--red); }
+  button { font:inherit; cursor:pointer; }
+  .btn { border:0; border-radius:10px; padding:10px 16px; font-weight:600; }
+  .btn.primary { background:var(--red); color:#fff; } .btn.primary:hover { background:var(--red-d); }
+  .btn.ghost { background:#fff; border:1px solid var(--line); } .btn.ghost:hover { border-color:var(--red); }
+  .check { display:flex; align-items:center; gap:8px; white-space:nowrap; font-size:14px; cursor:pointer; }
+  .check input { width:auto; accent-color:var(--red); }
+  table { width:100%; border-collapse:collapse; }
+  th { text-align:left; font-size:12px; text-transform:uppercase; color:var(--mute); padding:8px 10px; border-bottom:1px solid var(--line); }
+  td { padding:12px 10px; border-bottom:1px solid var(--line); vertical-align:middle; }
+  tr.off td.n, tr.off td.c { color:var(--mute); }
+  .bg { display:inline-block; min-width:42px; text-align:center; background:var(--red); color:#fff; font-weight:700; border-radius:8px; padding:4px 8px; }
+  tr.off .bg { background:#b9b2b0; }
+  .badge { border:0; border-radius:999px; padding:5px 12px; font-size:13px; font-weight:600; }
+  .badge.on { background:var(--okbg); color:var(--ok); } .badge.off { background:var(--noBg); color:var(--mute); }
+  .badge:hover { filter:brightness(.95); }
+  .acts { white-space:nowrap; text-align:right; }
+  .icon { background:none; border:1px solid var(--line); border-radius:8px; padding:5px 10px; margin-left:4px; font-size:13px; }
+  .icon:hover { border-color:var(--red); color:var(--red); }
+  .empty { text-align:center; padding:36px 10px; color:var(--mute); }
+  .overlay { position:fixed; inset:0; background:rgba(0,0,0,.45); display:none; align-items:center; justify-content:center; padding:16px; z-index:10; }
+  .overlay.show { display:flex; }
+  .modal { background:#fff; border-radius:16px; padding:22px; width:100%; max-width:440px; max-height:95vh; overflow:auto; }
+  .modal h3 { margin:0 0 14px; }
+  .field { margin-bottom:12px; } .field label { display:block; font-size:13px; font-weight:600; margin-bottom:4px; }
+  .row { display:flex; gap:10px; justify-content:flex-end; margin-top:16px; }
+  .err { color:var(--red); font-size:13px; min-height:18px; }
+  #toast { position:fixed; bottom:22px; left:50%; transform:translateX(-50%) translateY(80px); background:#222; color:#fff; padding:10px 18px; border-radius:10px; transition:.25s; z-index:20; }
+  #toast.show { transform:translateX(-50%) translateY(0); }
+  @media (max-width:820px) {
+    .toolbar { grid-template-columns:1fr 1fr; } .toolbar .wide { grid-column:1/-1; }
+    table, thead, tbody, tr, td { display:block; } thead { display:none; }
+    tr { border:1px solid var(--line); border-radius:12px; margin-bottom:10px; padding:6px 4px; }
+    td { border:0; padding:5px 10px; } .acts { text-align:left; }
+  }
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <h1>🩸 Online Blood Donor Directory</h1>
+  <p>Community directory where donors share their contact details and availability.</p>
+</div></header>
+
+<main><div class="wrap">
+  <div class="card">
+    <h2>Available donors by blood group <small style="text-transform:none">(click a group to filter)</small></h2>
+    <div class="stats" id="stats"></div>
+    <div class="summary" id="summary"></div>
+  </div>
+
+  <div class="card">
+    <div class="toolbar">
+      <input class="wide" id="q" type="search" placeholder="Search name, city, blood group or phone…">
+      <select id="fGroup"><option value="">All blood groups</option></select>
+      <input id="fCity" type="search" placeholder="Filter by city">
+      <label class="check" title="Hide unavailable donors"><input type="checkbox" id="fAvail"> Available only</label>
+      <button class="btn primary" id="addBtn">+ Add donor</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <table>
+      <thead><tr><th>Name</th><th>Blood group</th><th>City</th><th>Phone</th><th>Status</th><th></th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <div class="empty" id="empty" style="display:none">No donors match your search.</div>
+  </div>
+</div></main>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h3 id="mTitle">Register donor</h3>
+    <div class="field"><label for="fName">Full name</label><input id="fName" maxlength="100"></div>
+    <div class="field"><label for="mGroup">Blood group</label><select id="mGroup"></select></div>
+    <div class="field"><label for="mCity">City</label><input id="mCity" maxlength="100"></div>
+    <div class="field"><label for="mPhone">Phone number</label><input id="mPhone" maxlength="15" inputmode="tel"></div>
+    <label class="check"><input type="checkbox" id="mAvail" checked> Available to donate</label>
+    <div class="err" id="mErr"></div>
+    <div class="row"><button class="btn ghost" id="cancel">Cancel</button><button class="btn primary" id="save">Save</button></div>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script>
+const GROUPS = ["A+","A-","B+","B-","AB+","AB-","O+","O-"];
+const $ = id => document.getElementById(id);
+let editingId = null, timer = null;
+
+function el(tag, props = {}, ...kids) {
+  const e = document.createElement(tag);
+  Object.assign(e, props);
+  kids.forEach(k => e.append(k));
+  return e;
+}
+function toast(msg) {
+  const t = $("toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove("show"), 2200);
+}
+async function api(path, method = "GET", data) {
+  const opt = { method };
+  if (data) { opt.body = new URLSearchParams(data).toString(); opt.headers = { "Content-Type": "application/x-www-form-urlencoded" }; }
+  const r = await fetch(path, opt);
+  const j = await r.json();
+  if (!r.ok) throw new Error(j.error || "Something went wrong");
+  return j;
+}
+
+// ---------- directory list ----------
+async function loadDonors() {
+  const p = new URLSearchParams({ q: $("q").value, bloodGroup: $("fGroup").value, city: $("fCity").value, availableOnly: $("fAvail").checked });
+  try {
+    const list = await api("/api/donors?" + p);
+    const body = $("rows"); body.replaceChildren();
+    list.forEach(d => {
+      const tr = el("tr", { className: d.available ? "" : "off" },
+        el("td", { className: "n", textContent: d.donorName, style: "font-weight:600" }),
+        el("td", {}, el("span", { className: "bg", textContent: d.bloodGroup })),
+        el("td", { className: "c", textContent: d.city }),
+        el("td", {}, el("a", { href: "tel:" + d.phoneNumber, textContent: d.phoneNumber, style: "color:inherit" })),
+        el("td", {}, el("button", { className: "badge " + (d.available ? "on" : "off"), title: "Click to change",
+          textContent: d.available ? "● Available" : "○ Unavailable", onclick: () => toggle(d) })),
+        el("td", { className: "acts" },
+          el("button", { className: "icon", textContent: "Edit", onclick: () => openForm(d) }),
+          el("button", { className: "icon", textContent: "Delete", onclick: () => remove(d) })));
+      body.append(tr);
+    });
+    $("empty").style.display = list.length ? "none" : "block";
+    const f = $("fAvail").checked ? " (available donors only)" : "";
+    $("summary").textContent = "Showing " + list.length + " donor" + (list.length === 1 ? "" : "s") + f;
+  } catch (e) { toast(e.message); }
+}
+async function loadStats() {
+  try {
+    const s = await api("/api/stats");
+    const box = $("stats"); box.replaceChildren();
+    GROUPS.forEach(g => {
+      const b = el("button", { className: "stat" + ($("fGroup").value === g ? " active" : ""), onclick: () => {
+        $("fGroup").value = $("fGroup").value === g ? "" : g; refresh(); } },
+        el("b", { textContent: s.availableByGroup[g] ?? 0 }), el("span", { textContent: g }));
+      box.append(b);
+    });
+  } catch (e) { toast(e.message); }
+}
+function refresh() { loadDonors(); loadStats(); }
+
+// ---------- actions ----------
+async function toggle(d) {
+  try { await api("/api/donors/" + d.id + "/availability", "POST", { available: !d.available });
+        toast(d.donorName + " marked " + (d.available ? "Unavailable" : "Available")); refresh(); }
+  catch (e) { toast(e.message); }
+}
+async function remove(d) {
+  if (!confirm("Delete " + d.donorName + " from the directory?")) return;
+  try { await api("/api/donors/" + d.id, "DELETE"); toast("Donor deleted"); refresh(); }
+  catch (e) { toast(e.message); }
+}
+function openForm(d) {
+  editingId = d ? d.id : null;
+  $("mTitle").textContent = d ? "Edit donor" : "Register donor";
+  $("fName").value = d ? d.donorName : ""; $("mGroup").value = d ? d.bloodGroup : "O+";
+  $("mCity").value = d ? d.city : ""; $("mPhone").value = d ? d.phoneNumber : "";
+  $("mAvail").checked = d ? d.available : true; $("mErr").textContent = "";
+  $("overlay").classList.add("show"); $("fName").focus();
+}
+function closeForm() { $("overlay").classList.remove("show"); }
+async function save() {
+  const data = { donorName: $("fName").value, bloodGroup: $("mGroup").value, city: $("mCity").value,
+                 phoneNumber: $("mPhone").value, available: $("mAvail").checked };
+  try {
+    if (editingId) await api("/api/donors/" + editingId, "PUT", data); else await api("/api/donors", "POST", data);
+    closeForm(); toast(editingId ? "Donor updated" : "Donor registered"); refresh();
+  } catch (e) { $("mErr").textContent = e.message; }
+}
+
+// ---------- wiring ----------
+GROUPS.forEach(g => { $("fGroup").append(el("option", { value: g, textContent: g })); $("mGroup").append(el("option", { value: g, textContent: g })); });
+$("q").oninput = $("fCity").oninput = () => { clearTimeout(timer); timer = setTimeout(loadDonors, 250); };
+$("fGroup").onchange = $("fAvail").onchange = refresh;
+$("addBtn").onclick = () => openForm(null);
+$("cancel").onclick = closeForm; $("save").onclick = save;
+$("overlay").onclick = e => { if (e.target === $("overlay")) closeForm(); };
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeForm(); if (e.key === "Enter" && $("overlay").classList.contains("show")) save(); });
+refresh();
+</script>
+</body>
+</html>
